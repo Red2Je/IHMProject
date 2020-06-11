@@ -6,11 +6,13 @@ import java.util.ResourceBundle;
 import com.interactivemesh.jfx.importer.ImportException;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 
+import converter.Converter;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
@@ -18,6 +20,7 @@ import javafx.scene.PointLight;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
@@ -26,64 +29,75 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Translate;
 import manager.CameraManager;
+import model.DrawType;
+import model.Model;
 
 public class AppController implements Initializable {
 	
-	private static final float TEXTURE_LAT_OFFSET = -0.2f;
-	private static final float TEXTURE_LON_OFFSET = 2.8f;
-	
-	@FXML
-	Button buttonPlay;
-	
-	@FXML
-	Button buttonPause;
-	
-	@FXML
-	Button buttonStop;
-	
-	@FXML
-	RadioButton radioQuad;
-	
-	@FXML
-	RadioButton radioHist;
-	
-	@FXML
-	MenuItem animationMenuPlay;
-	
-	@FXML
-	MenuItem animationMenuPause;
-	
-	@FXML
-	MenuItem animationMenuStop;
 
 	@FXML
-	RadioMenuItem displayMenuQuad;
+	private Button buttonPlay;
 	
 	@FXML
-	RadioMenuItem displayMenuHist;
+	private Button buttonPause;
 	
 	@FXML
-	MenuItem fileMenuClose;
+	private Button buttonStop;
 	
 	@FXML
-	TextField textSpeed;
+	private RadioButton radioQuad;
+	
+	@FXML
+	private RadioButton radioHist;
+	
+	@FXML
+	private MenuItem animationMenuPlay;
+	
+	@FXML
+	private MenuItem animationMenuPause;
+	
+	@FXML
+	private MenuItem animationMenuStop;
+
+	@FXML
+	private RadioMenuItem displayMenuQuad;
+	
+	@FXML
+	private RadioMenuItem displayMenuHist;
+	
+	@FXML
+	private MenuItem fileMenuClose;
+	
+	@FXML
+	private TextField textSpeed;
 	
 	@FXML
 	private ComboBox<Integer> comboYear;
 	
 	@FXML
-	Slider sliderYear;
+	private Slider sliderYear;
 	
 	@FXML
-    Pane pane3D;
+    private Pane pane3D;
+	
+	@FXML
+	private CheckBox checkShow;
 	
 	
 	private int defaultSpeed = 1;
 	private int defaultYear = 1880;
 	private int currentSpeed;
 	private int currentYear;
+	private Model model;
+	private DrawType drawType;
+	private Group earth;
 	
 	public AppController() {
 		this.currentSpeed = defaultSpeed;
@@ -94,8 +108,10 @@ public class AppController implements Initializable {
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
 		//We call the method to setup the UI
+		this.drawType = DrawType.Quad;
 		this.setupUI();
 		this.setupEarthGUI();
+		this.model = new Model();
 }
 
 
@@ -144,18 +160,48 @@ public void setupUI() {
 	comboYear.setOnAction(event->{
 		this.currentYear = comboYear.getValue();
 		this.sliderYear.setValue(comboYear.getValue());
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
+		
 	});
 
 	//We setup these two listener for the slider event to allow the years to be modified and shown inside the combo box
 	sliderYear.setOnMouseClicked(event ->{
 		this.currentYear = (int)this.sliderYear.getValue();
 		this.comboYear.setValue((int)sliderYear.getValue());
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
 	});
 	sliderYear.setOnMouseDragged(event ->{
 		this.currentYear = (int)this.sliderYear.getValue();
 		this.comboYear.setValue((int)sliderYear.getValue());
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
 	});
-	}
+	
+	//We setup the radio button for the draw types
+	radioQuad.setOnMouseClicked(event->{
+		this.drawType = DrawType.Quad;
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
+	});
+	
+	radioHist.setOnMouseClicked(event ->{
+		this.drawType = DrawType.Hist;
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
+	});
+	
+	//We setup the check box to allow it to fire the draw event
+	checkShow.setOnAction(event ->{
+		this.draw();
+	});
+}
 
 /**
  * A method to initialize the earth group
@@ -186,29 +232,134 @@ public Group setupEarth() {
  */
 public void setupEarthGUI() {
 	//Group setup
-	Group earth = this.setupEarth();
+	this.earth = this.setupEarth();
 	//Subscene setup
-	SubScene subscene = new SubScene(earth,700,685,true,SceneAntialiasing.BALANCED);
+	SubScene subscene = new SubScene(this.earth,700,685,true,SceneAntialiasing.BALANCED);
 	subscene.setFill(Color.GRAY);
 	//Camera setup
 	PerspectiveCamera camera = new PerspectiveCamera(true);
-	new CameraManager(camera, pane3D, earth);
+	new CameraManager(camera, pane3D, this.earth);
 	subscene.setCamera(camera);
 	//Light setup
 	PointLight light = new PointLight(Color.WHITE);
 	light.setTranslateX(-180);
 	light.setTranslateY(-90);
 	light.setTranslateZ(-120);
-	light.getScope().addAll(earth);
+	light.getScope().addAll(this.earth);
 	earth.getChildren().add(light);
 	//Ambient Light setup
 	AmbientLight ambientLight = new AmbientLight(Color.WHITE);
-	ambientLight.getScope().addAll(earth);
+	ambientLight.getScope().addAll(this.earth);
 	earth.getChildren().add(ambientLight);
 	
 	
 	//We add the subscene to the pane containing the earth
 	pane3D.getChildren().addAll(subscene);
+}
+
+
+/**
+ * A method to create a line
+ * @param parent the group you want to add the line to
+ * @param origin the origin point of the line
+ * @param target the end point of the line
+ * @param material the phong material of the line
+ */
+public void createLine(Group parent, Point3D origin, Point3D target, PhongMaterial material) {
+    Point3D yAxis = new Point3D(0, 1, 0);
+    Point3D diff = target.subtract(origin);
+    double height = diff.magnitude();
+
+    Point3D mid = target.midpoint(origin);
+    Translate moveToMidpoint = new Translate(mid.getX(), mid.getY(), mid.getZ());
+
+    Point3D axisOfRotation = diff.crossProduct(yAxis);
+    double angle = Math.acos(diff.normalize().dotProduct(yAxis));
+    Rotate rotateAroundCenter = new Rotate(-Math.toDegrees(angle), axisOfRotation);
+
+    Cylinder line = new Cylinder(0.01f, height);
+
+    line.getTransforms().addAll(moveToMidpoint, rotateAroundCenter);
+    line.setMaterial(material);
+
+    parent.getChildren().add(line);
+}
+
+
+/**
+ * A method to add a quadrilateral thanks to its 4 points
+ * @param parent the parent root to add the quadrilateral to
+ * @param topRight the top right point of the quadrilateral
+ * @param bottomRight the bottom right point of the quadrilateral
+ * @param bottomLeft the bottom left point of the quadrilateral
+ * @param topLeft the top left point of the quadrilateral
+ * @param material the material of the quadrilateral
+ */
+public void addQuadrilateral(Group parent, Point3D topRight, Point3D bottomRight, Point3D bottomLeft, Point3D topLeft, PhongMaterial material) {
+	final TriangleMesh triangleMesh = new TriangleMesh();
+	
+	final float[] points = {
+			(float)topRight.getX(),(float)topRight.getY(),(float)topRight.getZ(),
+			(float)topLeft.getX(),(float)topLeft.getY(),(float)topLeft.getZ(),
+			(float)bottomLeft.getX(),(float)bottomLeft.getY(),(float)bottomLeft.getZ(),
+			(float)bottomRight.getX(),(float)bottomRight.getY(),(float)bottomRight.getZ()
+	};
+	
+	final float[] texCoords = {
+		1,1,
+		1,0,
+		0,1,
+		0,0
+	};
+	
+	final int[] faces = {
+		0,1,1,0,2,2,
+		0,1,2,2,3,3
+	};
+	
+	triangleMesh.getPoints().setAll(points);
+	triangleMesh.getTexCoords().setAll(texCoords);
+	triangleMesh.getFaces().setAll(faces);
+	
+	final MeshView meshView = new MeshView(triangleMesh);
+	meshView.setMaterial(material);
+	parent.getChildren().addAll(meshView);
+}
+
+
+
+
+/**
+ * A method to draw the data on the planet
+ */
+public void draw() {
+	double max = this.model.getMax();
+	
+	for(int lat = -88; lat <89; lat+=4) {
+		for(int lon = -178; lon<179 ; lon+=4) {
+			PhongMaterial material = new PhongMaterial();
+			double data = this.model.getData(this.currentYear, lat, lon);
+			switch(drawType) {
+				case Quad : {
+					material.setDiffuseColor(Converter.dataToColor(data, max,0.7));
+	        		Point3D topRight = Converter.geoCoordTo3dCoord(lat+2, lon+2,1.05f);
+	        		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.05f);
+	        		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.05f);
+	        		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.05f);
+	        		this.addQuadrilateral(this.earth, topRight, bottomRight, bottomLeft, topLeft, material);
+					break;
+				}
+				case Hist : {
+					material.setDiffuseColor(Converter.dataToColor(data, max, 0.7));
+					Point3D origin = Converter.geoCoordTo3dCoord(lat, lon, 1.05f);
+					Point3D target = Converter.geoCoordTo3dCoord(lat, lon, Math.abs((float)data/2));
+					this.createLine(this.earth, origin, target,material);
+					break;
+				}
+			}
+		}
+	}
+	
 }
 
 
