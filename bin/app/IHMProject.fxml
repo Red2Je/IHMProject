@@ -117,9 +117,9 @@
       </VBox>
    </left>
    <center>
-      <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+      <VBox prefHeight="800.0" prefWidth="100.0" BorderPane.alignment="CENTER">
          <children>
-            <Pane prefHeight="700.0" prefWidth="700.0">
+            <Pane fx:id="pane3D" prefHeight="700.0" prefWidth="700.0">
                <children>
                   <Separator orientation="VERTICAL" prefHeight="685.0" />
                </children>

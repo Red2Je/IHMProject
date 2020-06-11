@@ -1,10 +1,13 @@
 package app;
 
 
+import controller.AppController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 public class App extends Application {
@@ -16,11 +19,13 @@ public class App extends Application {
 	public void start(Stage primaryStage) throws Exception {
 		try {
 			Parent appContent = FXMLLoader.load(getClass().getResource("IHMProject.fxml"));
+			Scene globalScene = new Scene(appContent);
 			primaryStage.setTitle("Anomaly visualiser");
-			primaryStage.setScene(new Scene(appContent));
+			primaryStage.setScene(globalScene);
 			primaryStage.show();
 			
 		}catch(Exception e) {
+			System.out.println("Exception in app");
 			System.out.println(e);
 			e.printStackTrace();
 		}

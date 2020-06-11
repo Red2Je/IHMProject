@@ -1,22 +1,22 @@
 package controller;
 
 import java.net.URL;
-import java.text.NumberFormat;
 import java.util.ResourceBundle;
 
 import com.interactivemesh.jfx.importer.ImportException;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 
 import javafx.application.Platform;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.Property;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableArray;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.AmbientLight;
 import javafx.scene.Group;
+import javafx.scene.PerspectiveCamera;
+import javafx.scene.PointLight;
+import javafx.scene.SceneAntialiasing;
+import javafx.scene.SubScene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuItem;
@@ -24,11 +24,15 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.MeshView;
+import manager.CameraManager;
 
 public class AppController implements Initializable {
+	
+	private static final float TEXTURE_LAT_OFFSET = -0.2f;
+	private static final float TEXTURE_LON_OFFSET = 2.8f;
 	
 	@FXML
 	Button buttonPlay;
@@ -73,7 +77,8 @@ public class AppController implements Initializable {
 	Slider sliderYear;
 	
 	@FXML
-    Pane drawPane;
+    Pane pane3D;
+	
 	
 	private int defaultSpeed = 1;
 	private int defaultYear = 1880;
@@ -90,8 +95,7 @@ public class AppController implements Initializable {
 	public void initialize(URL location, ResourceBundle resources) {
 		//We call the method to setup the UI
 		this.setupUI();
-		Group earth = this.setupEarth();
-		//drawPane.getChildren().addAll(earth);
+		this.setupEarthGUI();
 }
 
 
@@ -165,10 +169,47 @@ public Group setupEarth() {
 	}catch(ImportException e) {
 		System.out.println(e);
 	}catch(Exception f) {
+		System.out.println("Exception in setupEarth");
 		System.out.println(f);
 	}
 	MeshView[] meshView = objImporter.getImport();
 	Group output = new Group(meshView);
 	return(output);
 }
+
+
+
+
+
+/**
+ * A method to setup the gui part containing the earth
+ */
+public void setupEarthGUI() {
+	//Group setup
+	Group earth = this.setupEarth();
+	//Subscene setup
+	SubScene subscene = new SubScene(earth,700,685,true,SceneAntialiasing.BALANCED);
+	subscene.setFill(Color.GRAY);
+	//Camera setup
+	PerspectiveCamera camera = new PerspectiveCamera(true);
+	new CameraManager(camera, pane3D, earth);
+	subscene.setCamera(camera);
+	//Light setup
+	PointLight light = new PointLight(Color.WHITE);
+	light.setTranslateX(-180);
+	light.setTranslateY(-90);
+	light.setTranslateZ(-120);
+	light.getScope().addAll(earth);
+	earth.getChildren().add(light);
+	//Ambient Light setup
+	AmbientLight ambientLight = new AmbientLight(Color.WHITE);
+	ambientLight.getScope().addAll(earth);
+	earth.getChildren().add(ambientLight);
+	
+	
+	//We add the subscene to the pane containing the earth
+	pane3D.getChildren().addAll(subscene);
+}
+
+
 }
