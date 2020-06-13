@@ -1,11 +1,14 @@
 package controller;
 
+import java.awt.event.ActionEvent;
 import java.net.URL;
 import java.util.ResourceBundle;
 
 import com.interactivemesh.jfx.importer.ImportException;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
+import com.sun.org.apache.bcel.internal.generic.GETSTATIC;
 
+import app.App;
 import converter.Converter;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -14,6 +17,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
@@ -27,11 +31,13 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
@@ -90,6 +96,9 @@ public class AppController implements Initializable {
 	@FXML
 	private CheckBox checkShow;
 	
+	@FXML
+	private BorderPane globalPane;
+	
 	
 	private int defaultSpeed = 1;
 	private int defaultYear = 1880;
@@ -98,6 +107,7 @@ public class AppController implements Initializable {
 	private Model model;
 	private DrawType drawType;
 	private Group earth;
+	private Group dataDrawing;
 	
 	public AppController() {
 		this.currentSpeed = defaultSpeed;
@@ -107,11 +117,17 @@ public class AppController implements Initializable {
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		//We call the method to setup the UI
+		//We call the methods to setup the UI
 		this.drawType = DrawType.Quad;
 		this.setupUI();
 		this.setupEarthGUI();
+		this.setupLegend();
+		
+		globalPane.setCursor(Cursor.WAIT);
 		this.model = new Model();
+		globalPane.setCursor(Cursor.DEFAULT);
+		this.dataDrawing = new Group();
+		this.earth.getChildren().addAll(this.dataDrawing);
 }
 
 
@@ -147,6 +163,7 @@ public void setupUI() {
 	radioQuad.selectedProperty().bindBidirectional(displayMenuQuad.selectedProperty());
 	
 	radioHist.selectedProperty().bindBidirectional(displayMenuHist.selectedProperty());
+	
 	
 	//We bind the menu item close to the event of closing a window
 	fileMenuClose.setOnAction(event ->{
@@ -200,6 +217,22 @@ public void setupUI() {
 	//We setup the check box to allow it to fire the draw event
 	checkShow.setOnAction(event ->{
 		this.draw();
+	});
+	
+	//We setup the Quad menu so it fire the change of display
+	displayMenuQuad.setOnAction(event ->{
+		this.drawType = DrawType.Quad;
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
+	});
+	
+	//We setup the Hist menu so it fire the change of display
+	displayMenuHist.setOnAction(event ->{
+		this.drawType = DrawType.Hist;
+		if(checkShow.isSelected()) {
+			this.draw();
+		}
 	});
 }
 
@@ -334,33 +367,65 @@ public void addQuadrilateral(Group parent, Point3D topRight, Point3D bottomRight
  */
 public void draw() {
 	double max = this.model.getMax();
-	
+	globalPane.setCursor(Cursor.WAIT);
+	try {
+		this.dataDrawing.getChildren().clear();
+	}catch(Exception e) {
+		e.printStackTrace();
+	}	
 	for(int lat = -88; lat <89; lat+=4) {
 		for(int lon = -178; lon<179 ; lon+=4) {
 			PhongMaterial material = new PhongMaterial();
 			double data = this.model.getData(this.currentYear, lat, lon);
+			Color dataColor = Converter.dataToColor(data, max, 0.7);
+			material.setDiffuseColor(dataColor);
+			material.setSpecularColor(dataColor);
 			switch(drawType) {
 				case Quad : {
-					material.setDiffuseColor(Converter.dataToColor(data, max,0.7));
 	        		Point3D topRight = Converter.geoCoordTo3dCoord(lat+2, lon+2,1.05f);
 	        		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.05f);
 	        		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.05f);
 	        		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.05f);
-	        		this.addQuadrilateral(this.earth, topRight, bottomRight, bottomLeft, topLeft, material);
+	        		this.addQuadrilateral(this.dataDrawing, topRight, bottomRight, bottomLeft, topLeft, material);
 					break;
 				}
 				case Hist : {
-					material.setDiffuseColor(Converter.dataToColor(data, max, 0.7));
 					Point3D origin = Converter.geoCoordTo3dCoord(lat, lon, 1.05f);
-					Point3D target = Converter.geoCoordTo3dCoord(lat, lon, Math.abs((float)data/2));
-					this.createLine(this.earth, origin, target,material);
+					Point3D target = Converter.geoCoordTo3dCoord(lat, lon, Math.abs((float)data));
+					this.createLine(this.dataDrawing, origin, target,material);
 					break;
 				}
 			}
 		}
 	}
+	globalPane.setCursor(Cursor.DEFAULT);
 	
 }
 
+
+
+
+public void setupLegend() {
+	Group rectGroup = new Group();
+	for(float i = 0; i<6 ; i++) {
+		Rectangle rect = new Rectangle(30,30);
+		//We setup the color of the rectangle
+		Color color = null;
+		if(i<3) {
+			System.out.println(1-(i/3));
+			color = new Color(1-(i/3),0,0,1);
+		}else {
+			System.out.println((i+1)/3-1);
+			color = new Color(0,0,(i+1)/3-1,1);
+		}
+		rect.setFill(color);
+		//Then we translate the rectangles to the place of the legend
+		rect.setTranslateX(670);
+		rect.setTranslateY(260+i*30);
+		//And we add it to the pane, before the earth so the rotations and translations doesn't applies to it 
+		rectGroup.getChildren().add(rect);
+	}
+	this.pane3D.getChildren().addAll(rectGroup);
+}
 
 }

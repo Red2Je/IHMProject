@@ -40,7 +40,7 @@ public class Converter {
     	}else if(data<0) {
     		return(new Color(0,0,Math.abs(data/max),opacity));
     	}else {//this case represent Double.nan
-    		return(new Color(1,1,0,opacity/2));//we divide the opacity by two because the yellow is really bright compared to the black and white model
+    		return(null);//we divide the opacity by two because the yellow is really bright compared to the black and white model
     	}
     }
 
