@@ -36,9 +36,9 @@ public class Converter {
      */
     public static Color dataToColor(double data,double max,double opacity) {
     	if(data >= 0) {
-    		return(new Color(data/max,0,0,opacity));
+    		return(new Color(1,1-data/max,0,opacity));
     	}else if(data<0) {
-    		return(new Color(0,0,Math.abs(data/max),opacity));
+    		return(new Color(0,1-Math.abs(data/max),1,opacity));
     	}else {//this case represent Double.nan
     		return(null);//we divide the opacity by two because the yellow is really bright compared to the black and white model
     	}

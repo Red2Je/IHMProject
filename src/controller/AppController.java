@@ -1,15 +1,13 @@
 package controller;
 
-import java.awt.event.ActionEvent;
 import java.net.URL;
 import java.util.ResourceBundle;
 
 import com.interactivemesh.jfx.importer.ImportException;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
-import com.sun.org.apache.bcel.internal.generic.GETSTATIC;
 
-import app.App;
 import converter.Converter;
+import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -31,6 +29,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -99,19 +98,27 @@ public class AppController implements Initializable {
 	@FXML
 	private BorderPane globalPane;
 	
+	@FXML
+	private AnchorPane animationPane;
 	
-	private int defaultSpeed = 1;
+	
+	private float defaultSpeed = 0.1f;
 	private int defaultYear = 1880;
-	private int currentSpeed;
+	private float currentSpeed;
 	private int currentYear;
 	private Model model;
 	private DrawType drawType;
 	private Group earth;
 	private Group dataDrawing;
+	private boolean isPlay;
+	private boolean isPaused;
+	private int startYear;
+	private AnimationTimer timer;
 	
 	public AppController() {
 		this.currentSpeed = defaultSpeed;
 		this.currentYear = defaultYear;
+		this.startYear = currentYear;
 
 	}
 
@@ -171,7 +178,7 @@ public void setupUI() {
 	});
 	
 	//We setup the default text for the speed of the animation
-	textSpeed.setText(Integer.toString(currentSpeed));
+	textSpeed.setText(Float.toString(currentSpeed));
 	
 	//We add an event handler to the combo box to set the controller's selected year and the slider's position
 	comboYear.setOnAction(event->{
@@ -180,23 +187,19 @@ public void setupUI() {
 		if(checkShow.isSelected()) {
 			this.draw();
 		}
-		
 	});
 
+
 	//We setup these two listener for the slider event to allow the years to be modified and shown inside the combo box
-	sliderYear.setOnMouseClicked(event ->{
+	sliderYear.setOnMousePressed(event ->{
 		this.currentYear = (int)this.sliderYear.getValue();
 		this.comboYear.setValue((int)sliderYear.getValue());
-		if(checkShow.isSelected()) {
-			this.draw();
-		}
+		//We wont draw in the sliderTear listeners as the combo box has a listener on a setonaction, so is detecting change in its value
 	});
+	
 	sliderYear.setOnMouseDragged(event ->{
 		this.currentYear = (int)this.sliderYear.getValue();
 		this.comboYear.setValue((int)sliderYear.getValue());
-		if(checkShow.isSelected()) {
-			this.draw();
-		}
 	});
 	
 	//We setup the radio button for the draw types
@@ -234,6 +237,44 @@ public void setupUI() {
 			this.draw();
 		}
 	});
+	
+	//We setup the speed text 
+	textSpeed.setOnKeyReleased(event ->{
+		try {
+			this.currentSpeed = Float.parseFloat(this.textSpeed.getText()) ;
+		}catch(NumberFormatException e) {
+			//We check if the entered number is in the right format. If it isn't then nothing is done
+		}
+		
+	});
+	//This event handler is related to the textSpeed : if we exit the pane (the textField was too small and so too sensitive), the last correctly formatted animation speed is displayed in the textField
+	animationPane.setOnMouseExited(event ->{
+		this.textSpeed.setText(Float.toString(this.currentSpeed));
+	});
+	
+	//We setup the buttons for the animation
+	buttonPlay.setOnAction(event ->{
+			this.playAnimation();
+			this.timer.start();
+	});
+	
+	buttonPause.setOnAction(event ->{
+		if(!isPaused) {
+			isPlay = false;
+			this.timer.stop();
+		}
+	});
+	
+	buttonStop.setOnAction(event ->{
+		if(this.timer != null && isPlay) {
+			isPlay = false;
+			this.timer.stop();
+			this.currentYear = this.startYear;
+			this.sliderYear.setValue(this.currentYear);
+			this.comboYear.setValue(this.currentYear);
+		}
+	});
+	
 }
 
 /**
@@ -367,7 +408,6 @@ public void addQuadrilateral(Group parent, Point3D topRight, Point3D bottomRight
  */
 public void draw() {
 	double max = this.model.getMax();
-	globalPane.setCursor(Cursor.WAIT);
 	try {
 		this.dataDrawing.getChildren().clear();
 	}catch(Exception e) {
@@ -377,7 +417,7 @@ public void draw() {
 		for(int lon = -178; lon<179 ; lon+=4) {
 			PhongMaterial material = new PhongMaterial();
 			double data = this.model.getData(this.currentYear, lat, lon);
-			Color dataColor = Converter.dataToColor(data, max, 0.7);
+			Color dataColor = Converter.dataToColor(data, max, 0.7);//we give the next shape a color corresponding to the data
 			material.setDiffuseColor(dataColor);
 			material.setSpecularColor(dataColor);
 			switch(drawType) {
@@ -398,13 +438,14 @@ public void draw() {
 			}
 		}
 	}
-	globalPane.setCursor(Cursor.DEFAULT);
 	
 }
 
 
 
-
+/**
+ * A method to setup the color legend, in the right corner
+ */
 public void setupLegend() {
 	Group rectGroup = new Group();
 	for(float i = 0; i<6 ; i++) {
@@ -412,11 +453,9 @@ public void setupLegend() {
 		//We setup the color of the rectangle
 		Color color = null;
 		if(i<3) {
-			System.out.println(1-(i/3));
-			color = new Color(1-(i/3),0,0,1);
+			color = new Color(1,i/3,0,1);
 		}else {
-			System.out.println((i+1)/3-1);
-			color = new Color(0,0,(i+1)/3-1,1);
+			color = new Color(0,2-i/3,1,1);
 		}
 		rect.setFill(color);
 		//Then we translate the rectangles to the place of the legend
@@ -427,5 +466,28 @@ public void setupLegend() {
 	}
 	this.pane3D.getChildren().addAll(rectGroup);
 }
+
+
+
+public void playAnimation() {
+	final long startNanoTime = System.nanoTime();
+	this.timer = new AnimationTimer() {
+		@Override
+		public void handle(long now) {
+			double t = (now - startNanoTime)*Math.pow(10, 9);
+			System.out.println(t%currentSpeed);
+			if(currentYear < 2020) {
+				currentYear++;
+				sliderYear.setValue(currentYear);
+				comboYear.setValue(currentYear);
+				draw();
+			}else {
+				this.stop();
+			}
+		}
+	};
+}
+
+
 
 }
