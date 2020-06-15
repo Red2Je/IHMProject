@@ -9,8 +9,12 @@ import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 import converter.Converter;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Point3D;
@@ -102,16 +106,14 @@ public class AppController implements Initializable {
 	private AnchorPane animationPane;
 	
 	
-	private float defaultSpeed = 0.1f;
+	private int defaultSpeed = 1;
 	private int defaultYear = 1880;
-	private float currentSpeed;
+	private int currentSpeed;
 	private int currentYear;
 	private Model model;
 	private DrawType drawType;
 	private Group earth;
 	private Group dataDrawing;
-	private boolean isPlay;
-	private boolean isPaused;
 	private int startYear;
 	private AnimationTimer timer;
 	
@@ -241,7 +243,7 @@ public void setupUI() {
 	//We setup the speed text 
 	textSpeed.setOnKeyReleased(event ->{
 		try {
-			this.currentSpeed = Float.parseFloat(this.textSpeed.getText()) ;
+			this.currentSpeed = Integer.parseInt(this.textSpeed.getText()) ;
 		}catch(NumberFormatException e) {
 			//We check if the entered number is in the right format. If it isn't then nothing is done
 		}
@@ -254,25 +256,22 @@ public void setupUI() {
 	
 	//We setup the buttons for the animation
 	buttonPlay.setOnAction(event ->{
+			this.startYear = currentYear;
 			this.playAnimation();
 			this.timer.start();
 	});
 	
 	buttonPause.setOnAction(event ->{
-		if(!isPaused) {
-			isPlay = false;
-			this.timer.stop();
-		}
+		this.timer.stop();
 	});
 	
 	buttonStop.setOnAction(event ->{
-		if(this.timer != null && isPlay) {
-			isPlay = false;
-			this.timer.stop();
-			this.currentYear = this.startYear;
-			this.sliderYear.setValue(this.currentYear);
-			this.comboYear.setValue(this.currentYear);
-		}
+		this.timer.stop();
+		this.currentYear = this.startYear;
+		this.sliderYear.setValue(this.currentYear);
+		this.comboYear.setValue(this.currentYear);
+		this.startYear = this.defaultYear;
+		draw();
 	});
 	
 }
@@ -470,24 +469,71 @@ public void setupLegend() {
 
 
 public void playAnimation() {
-	final long startNanoTime = System.nanoTime();
 	this.timer = new AnimationTimer() {
 		@Override
 		public void handle(long now) {
-			double t = (now - startNanoTime)*Math.pow(10, 9);
-			System.out.println(t%currentSpeed);
-			if(currentYear < 2020) {
-				currentYear++;
+			if(currentYear + currentSpeed < 2020) {
+				final Service<Void> animationService = new Service<Void>() {
+					@Override
+					protected Task<Void> createTask() {
+						return new Task<Void>() {
+							@Override
+							protected Void call() throws Exception {
+								try {
+									//System.out.println("i sleep");
+									Thread.sleep(5000);
+								}catch(InterruptedException e) {
+								}
+								return null;
+							}
+						};
+					}
+				};
+				
+				animationService.stateProperty().addListener((ObservableValue<? extends Worker.State> ov,Worker.State olv,Worker.State nv) ->{
+					switch(nv) {
+						case FAILED : 
+						case CANCELLED :
+						case SUCCEEDED :
+							currentYear += currentSpeed;
+							sliderYear.setValue(currentYear);
+							comboYear.setValue(currentYear);
+							draw();
+							break;
+					}
+						
+				});
+				animationService.start();
+			}else {
+				currentYear = 2020;
 				sliderYear.setValue(currentYear);
 				comboYear.setValue(currentYear);
 				draw();
-			}else {
 				this.stop();
 			}
 		}
 	};
 }
-
+/*Premier essai de sleeper, échec à cause de l'extinction du mauvais thread
+ * Task<Void> sleeper = new Task<Void>() {
+					@Override
+					protected Void call() throws Exception {
+						try {
+							//System.out.println("i sleep");
+							Thread.sleep(5000);
+						}catch(InterruptedException e) {
+						}
+						return null;
+					}
+				};
+				sleeper.setOnSucceeded(event ->{
+					currentYear += currentSpeed;
+					sliderYear.setValue(currentYear);
+					comboYear.setValue(currentYear);
+					draw();
+				});
+				new Thread(sleeper).start();
+ */
 
 
 }
