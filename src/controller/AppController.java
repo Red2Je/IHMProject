@@ -5,7 +5,6 @@ import java.util.ResourceBundle;
 
 import com.interactivemesh.jfx.importer.ImportException;
 import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
-
 import converter.Converter;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
@@ -15,10 +14,12 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.Worker;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
+import javafx.scene.Camera;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
@@ -52,8 +53,10 @@ import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import manager.CameraManager;
+import model.ClickableQuad;
 import model.DrawType;
 import model.ExplicitShape;
+import model.Hist;
 import model.Model;
 
 public class AppController implements Initializable {
@@ -126,6 +129,7 @@ public class AppController implements Initializable {
 	private Group earth;
 	private Group dataDrawing;
 	private Group sphere;
+	private Group clickableQuad;
 	private int startYear;
 	private AnimationTimer timer;
 	private boolean isPlay =false;
@@ -137,6 +141,7 @@ public class AppController implements Initializable {
 	private int selectedLon;
 	private double maxData;
 	private double minData;
+	private boolean isDraw = false;
 	
 	public AppController() {
 		this.currentSpeed = defaultSpeed;
@@ -162,6 +167,8 @@ public class AppController implements Initializable {
 		this.maxData = this.model.getMax();
 		this.minData = this.model.getMin();
 		this.chart.setLegendVisible(false);
+		this.setupSelection();
+		this.earth.getChildren().addAll(clickableQuad);
 }
 
 
@@ -242,7 +249,14 @@ public void setupUI() {
 	
 	//We setup the check box to allow it to fire the draw event
 	checkShow.setOnAction(event ->{
-		this.changeYear(currentYear);
+		if(!isDraw) {
+			isDraw = true;
+			this.changeYear(currentYear);
+		}else {
+			this.dataDrawing.getChildren().clear();
+			isDraw = false;
+		}
+		
 	});
 	
 	//We setup the Quad menu so it fire the change of display
@@ -304,13 +318,7 @@ public void setupUI() {
 			this.startYear = this.defaultYear;
 			draw();
 		}
-	});
-	
-	//we setup the area detection
-	pane3D.setOnMouseClicked(MouseEvent ->{
-		this.changeSelected(MouseEvent);
-	});
-	
+	});	
 }
 
 /**
@@ -459,20 +467,11 @@ public void changeYear(int year) {
 
 
 
-public void changeSelected(MouseEvent me) {
-	double x = me.getX();
-	double y = me.getY();
-	double z = me.getZ();
-	System.out.println(x+" "+y+" "+z);
-	this.selectedLat = (int)Math.acos(z);//the formula is lat = asin(z/R) with R the radius of the object, however, here, the earth has a raidus of 1;
-	this.selectedLon = (int)Math.atan(y/x);
-	
+public void changeSelected(MouseEvent me,int selectedLat, int selectedLon) {
 	if(!isAreaSelected && me.isShiftDown()) {
 		isAreaSelected = true;
-		//this.selectedArea = this.shapes.getQuad().get(Model.sphereToCoord((int)lat, (int)lon));
-		System.out.println("Sphere");
 		this.sphere = new Group();
-		Sphere point = new Sphere(0.2);
+		Sphere point = new Sphere(0.1);
 		Point3D translateVector = Converter.geoCoordTo3dCoord(selectedLat, selectedLon, 1);
 		point.setTranslateX(translateVector.getX());
 		point.setTranslateY(translateVector.getY());
@@ -482,21 +481,43 @@ public void changeSelected(MouseEvent me) {
 		material.setSpecularColor(Color.PURPLE);
 		this.sphere.getChildren().add(point);
 		earth.getChildren().addAll(this.sphere);
-		this.updateChart();
+		this.updateChart(selectedLat,selectedLon);
 	}else if(this.isAreaSelected && me.isShiftDown()){
 		isAreaSelected = false;
-		System.out.println("Pas sphere");
 		this.sphere.getChildren().clear();
-		this.updateChart();
+		this.updateChart(selectedLat,selectedLon);
+	}
+}
+
+public void setupSelection() {
+	this.clickableQuad = new Group();
+	for(int lat = -88; lat <89; lat+=4) {
+		for(int lon = -178; lon<179 ; lon+=4) {
+			PhongMaterial material = new PhongMaterial();
+    		Point3D topRight = Converter.geoCoordTo3dCoord(lat+2, lon+2,1.005f);
+    		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.005f);
+    		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.005f);
+    		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.005f);
+    		ClickableQuad Quad = new ClickableQuad(topRight, bottomRight, bottomLeft, topLeft, material,lat,lon);
+    		this.clickableQuad.getChildren().add(Quad.getQuadMesh());
+    		Quad.getQuadMesh().requestFocus();
+    		material.setDiffuseColor(null);
+    		Quad.getQuadMesh().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>(){
+    			@Override
+    			public void handle(MouseEvent event) {
+    				changeSelected(event, Quad.getLat(), Quad.getLon());
+    			} 	
+    		});
+		}
 	}
 }
 
 
-public void updateChart() {
+public void updateChart(int lat, int lon) {
 	if(this.isAreaSelected) {
 		XYChart.Series<String, Double> dataSeries = new Series<>();
 		for(Integer year = 1880; year <= 2020 ; year++) {
-			dataSeries.getData().add(new XYChart.Data<String,Double>(year.toString(),this.model.getData(year.intValue(), selectedLat, selectedLon)));
+			dataSeries.getData().add(new XYChart.Data<String,Double>(year.toString(),this.model.getData(year.intValue(), lat, lon)));
 		}
 		chart.getData().add(dataSeries);
 		chart.setVisible(true);
@@ -505,4 +526,5 @@ public void updateChart() {
 		chart.setVisible(false);
 	}
 }
+
 }

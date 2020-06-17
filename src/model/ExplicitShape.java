@@ -17,21 +17,20 @@ public class ExplicitShape {
 
 	ArrayList<MeshView> quadArray = new ArrayList<MeshView>();
 	ArrayList<Hist> histArray = new ArrayList<Hist>();
+	private int selectedLat ;
+	private int selectedLon ;
 	public ExplicitShape() {
 		System.out.println("[Shaping] Building shapes");
 		for(int lat = -88; lat <89; lat+=4) {
 			for(int lon = -178; lon<179 ; lon+=4) {
 				PhongMaterial material = new PhongMaterial();
-        		Point3D topRight = Converter.geoCoordTo3dCoord(lat+2, lon+2,1.05f);
-        		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.05f);
-        		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.05f);
-        		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.05f);
-        		try{
-        			this.quadArray.add(this.addQuadrilateral(topRight, bottomRight, bottomLeft, topLeft, material));
-        		}catch(Exception e) {
-        			e.printStackTrace();
-        		}
-				Point3D origin = Converter.geoCoordTo3dCoord(lat, lon, 1.05f);
+        		Point3D topRight = Converter.geoCoordTo3dCoord(lat+2, lon+2,1.004f);
+        		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.004f);
+        		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.004f);
+        		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.004f);
+        		MeshView Quad = ExplicitShape.addQuadrilateral(topRight, bottomRight, bottomLeft, topLeft, material);
+        		this.quadArray.add(Quad);
+				Point3D origin = Converter.geoCoordTo3dCoord(lat, lon, 1.004f);
 				Point3D target = Converter.geoCoordTo3dCoord(lat, lon, 1.1f);
 				Hist line = new Hist(origin,target);
 				this.histArray.add(line);
@@ -51,7 +50,7 @@ public class ExplicitShape {
 	 * @param material the material of the quadrilateral
 	 * @return a meshview corresponding to a quadrilateral
 	 */
-	public MeshView addQuadrilateral(Point3D topRight, Point3D bottomRight, Point3D bottomLeft, Point3D topLeft, PhongMaterial material) {
+	public static MeshView addQuadrilateral(Point3D topRight, Point3D bottomRight, Point3D bottomLeft, Point3D topLeft, PhongMaterial material) {
 		final TriangleMesh triangleMesh = new TriangleMesh();
 		final float[] points = {
 				(float)topRight.getX(),(float)topRight.getY(),(float)topRight.getZ(),
@@ -95,6 +94,13 @@ public class ExplicitShape {
 	
 	
 	
+	public int getSelectedLat() {
+		return(this.selectedLat);
+	}
+	
+	public int getSelectedLon() {
+		return(this.selectedLon);
+	}
 	
 	
 	public ArrayList<MeshView> getQuad(){
