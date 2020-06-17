@@ -1,3 +1,7 @@
+/**
+ * The controller of the application
+ * @author Nicolas Sylvestre
+ */
 package controller;
 
 import java.net.URL;
@@ -8,19 +12,13 @@ import com.interactivemesh.jfx.importer.obj.ObjModelImporter;
 import converter.Converter;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Service;
-import javafx.concurrent.Task;
-import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
-import javafx.scene.Camera;
-import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
@@ -37,26 +35,19 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Sphere;
-import javafx.scene.shape.TriangleMesh;
-import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Translate;
 import manager.CameraManager;
 import model.ClickableQuad;
 import model.DrawType;
 import model.ExplicitShape;
-import model.Hist;
 import model.Model;
 
 public class AppController implements Initializable {
@@ -119,26 +110,28 @@ public class AppController implements Initializable {
 	@FXML
 	private BarChart<String,Double> chart;
 	
-	
+	//We give the default values for the years and the speed
 	private int defaultSpeed = 1;
 	private int defaultYear = 1880;
 	private int currentSpeed;
 	private int currentYear;
 	private Model model;
 	private DrawType drawType;
+	//The group containing the earth object, and attached to it the dataDrawing group and the sphere group, to follow the transformations
 	private Group earth;
 	private Group dataDrawing;
 	private Group sphere;
+	//This group is filled with quadrilateral with listeners on them to get the value of the latitude and longitude of where we click
 	private Group clickableQuad;
+	
 	private int startYear;
+	//The aniation timer for the animation
 	private AnimationTimer timer;
 	private boolean isPlay =false;
 	private boolean isPaused = false;
+	//A class that will hold both quadrilateral list and histogram list and generate them
 	private ExplicitShape shapes;
 	private boolean isAreaSelected = false;
-	private Material oldAreaColor;
-	private int selectedLat;
-	private int selectedLon;
 	private double maxData;
 	private double minData;
 	private boolean isDraw = false;
@@ -152,21 +145,24 @@ public class AppController implements Initializable {
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		//We call the methods to setup the UI
+		//We set the default draw type to quadrilateral
 		this.drawType = DrawType.Quad;
+		//We call the method setup UI to mainly add listeners and binds to every FXML objects
 		this.setupUI();
+		//We call the method setup Earth GUI to import the earth obj and put it in the earth group
 		this.setupEarthGUI();
+		//We call the method setup Legend to setup the legend on the right side, inside the pane so it wont move with the planet
 		this.setupLegend();
-		
-		globalPane.setCursor(Cursor.WAIT);
+		//We call the constructor for the model so it loads the data from the CSV
 		this.model = new Model();
-		globalPane.setCursor(Cursor.DEFAULT);
 		this.dataDrawing = new Group();
 		this.earth.getChildren().addAll(this.dataDrawing);
+		//We pre-initialize the array of quadrilateral and the array of histograms
 		this.shapes = new ExplicitShape();
 		this.maxData = this.model.getMax();
 		this.minData = this.model.getMin();
 		this.chart.setLegendVisible(false);
+		//We setup the transparent quadrilateral to be clicked
 		this.setupSelection();
 		this.earth.getChildren().addAll(clickableQuad);
 }
@@ -388,12 +384,10 @@ public void setupEarthGUI() {
  * A method to draw the data on the planet
  */
 public void draw() {
-	try {
-		this.dataDrawing.getChildren().clear();
-	}catch(Exception e) {
-		e.printStackTrace();
-	}	
+	//We start by clearing the dataDrawing group
+	this.dataDrawing.getChildren().clear();
 	switch(this.drawType) {
+	//Then draw the correct type of data
 	case Quad:
 		this.dataDrawing.getChildren().addAll(this.shapes.getQuad());
 		break;
@@ -454,7 +448,10 @@ public void playAnimation() {
 	};
 }
 	
-
+/**
+ * A method to update the years in the shapes model
+ * @param year the year you want to set the model in
+ */
 public void changeYear(int year) {
 	this.currentYear = year;
 	this.comboYear.setValue(this.currentYear);
@@ -466,12 +463,20 @@ public void changeYear(int year) {
 }
 
 
-
+/**
+ * A method to put a sphere where you selected
+ * @param me the mouse event associated
+ * @param selectedLat the latitude selected with the mouse
+ * @param selectedLon the longitude selected with the mouse
+ */
 public void changeSelected(MouseEvent me,int selectedLat, int selectedLon) {
-	if(!isAreaSelected && me.isShiftDown()) {
+	if(!isAreaSelected && me.isShiftDown()) {//We check if we already selected an area
+		//If the area is selected, we put a follow attribute
 		isAreaSelected = true;
+		//We put the sphere inside its own group, that we then will put in the earth
 		this.sphere = new Group();
 		Sphere point = new Sphere(0.1);
+		//We get where we want to put the sphere and then we translate it
 		Point3D translateVector = Converter.geoCoordTo3dCoord(selectedLat, selectedLon, 1);
 		point.setTranslateX(translateVector.getX());
 		point.setTranslateY(translateVector.getY());
@@ -481,14 +486,19 @@ public void changeSelected(MouseEvent me,int selectedLat, int selectedLon) {
 		material.setSpecularColor(Color.PURPLE);
 		this.sphere.getChildren().add(point);
 		earth.getChildren().addAll(this.sphere);
+		//We update the chart with the right selection
 		this.updateChart(selectedLat,selectedLon);
-	}else if(this.isAreaSelected && me.isShiftDown()){
+	}else if(this.isAreaSelected && me.isShiftDown()){//if we already have a selection, we deselect what we already have
 		isAreaSelected = false;
 		this.sphere.getChildren().clear();
+		//Same as before, we update the chart, setting it to visible(false)
 		this.updateChart(selectedLat,selectedLon);
 	}
 }
 
+/**
+ * We setup the quadrilateral array which will be clickable
+ */
 public void setupSelection() {
 	this.clickableQuad = new Group();
 	for(int lat = -88; lat <89; lat+=4) {
@@ -498,10 +508,14 @@ public void setupSelection() {
     		Point3D bottomRight = Converter.geoCoordTo3dCoord(lat-2, lon+2,1.005f);
     		Point3D bottomLeft = Converter.geoCoordTo3dCoord(lat-2, lon-2,1.005f);
     		Point3D topLeft = Converter.geoCoordTo3dCoord(lat+2, lon-2,1.005f);
+    		//The clickableQuad object contains a meshView and the latitude and longitude attribute
     		ClickableQuad Quad = new ClickableQuad(topRight, bottomRight, bottomLeft, topLeft, material,lat,lon);
     		this.clickableQuad.getChildren().add(Quad.getQuadMesh());
+    		//We request the focus to be in front of everything in terms of click
     		Quad.getQuadMesh().requestFocus();
+    		//We set the the diffuse color to null to make the color transparent
     		material.setDiffuseColor(null);
+    		//We add an event handler to detect which quadrilateral is selected
     		Quad.getQuadMesh().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>(){
     			@Override
     			public void handle(MouseEvent event) {
@@ -513,15 +527,24 @@ public void setupSelection() {
 }
 
 
+/**
+ * A method to update the chart depending on what you selected
+ * @param lat the latitude of what you selected
+ * @param lon the longitude of what you selected
+ */
 public void updateChart(int lat, int lon) {
+	//We draw the chart only if an area is selected
 	if(this.isAreaSelected) {
+		//We setup the serie for the chart to be drawn of
 		XYChart.Series<String, Double> dataSeries = new Series<>();
+		//For each year, we add the anomaly to the series thanks to the XYChart
 		for(Integer year = 1880; year <= 2020 ; year++) {
 			dataSeries.getData().add(new XYChart.Data<String,Double>(year.toString(),this.model.getData(year.intValue(), lat, lon)));
 		}
 		chart.getData().add(dataSeries);
 		chart.setVisible(true);
 	}else {
+		//if nothing is selected, we set the chart to invisible
 		chart.getData().clear();
 		chart.setVisible(false);
 	}

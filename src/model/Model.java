@@ -1,3 +1,7 @@
+/**
+ * A class that holds the model of the application (the matrix of values of temperature anomalies)
+ * @author Nicolas Sylvestre
+ */
 package model;
 
 import java.util.ArrayList;
@@ -6,10 +10,17 @@ import java.util.ArrayList;
 public class Model {
 
 	private ArrayList<ArrayList<Double>> data;
+	/**
+	 * The constructor only calls the filereader to set its data
+	 */
 	public Model() {
 		this.data = FileRead.Read("..\\ProjetIHM\\src\\model\\tempanomaly_4x4grid.csv");
 	}
 	
+	/**
+	 * A getter for the matrix of data
+	 * @return the matrix of data
+	 */
 	public ArrayList<ArrayList<Double>> get(){
 		return(this.data);
 	}

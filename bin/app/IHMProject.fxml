@@ -60,7 +60,7 @@
                <children>
                   <RadioButton fx:id="radioQuad" layoutX="25.0" layoutY="17.0" mnemonicParsing="false" selected="true" text="Quadrilatères">
                      <toggleGroup>
-                        <ToggleGroup fx:id="radioGroup" />
+                        <ToggleGroup/>
                      </toggleGroup>
                   </RadioButton>
                   <RadioButton fx:id="radioHist" layoutX="25.0" layoutY="52.0" mnemonicParsing="false" text="Histogrammes" toggleGroup="$radioGroup" />

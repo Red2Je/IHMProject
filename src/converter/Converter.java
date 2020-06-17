@@ -1,3 +1,7 @@
+/**
+ * A class to put all the converter in 
+ * @author Nicolas Sylvestre
+ */
 package converter;
 
 import javafx.geometry.Point3D;
@@ -51,12 +55,5 @@ public class Converter {
     	}
     }
     
-    
-    public static int[] coordToGeo(double x, double y, double z) {
-    		double lon = Math.acos(z);
-    		double lat = Math.atan2(y,x);
-    		int[] ret = {(int)Math.toDegrees(lon),(int)Math.toDegrees(lat)};
-    		return(ret);
-    }
 
 }

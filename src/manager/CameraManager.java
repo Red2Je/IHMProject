@@ -1,3 +1,7 @@
+/**
+ * A class to help with the camera management
+ * @author Olivier Gladin, Cedric Fleury
+ */
 package manager;
 
 import javafx.event.EventHandler;

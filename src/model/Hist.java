@@ -1,3 +1,7 @@
+/**
+ * A class to represent the histogram bars, with their latitude and longitude
+ * @author Nicolas Sylvestre
+ */
 package model;
 
 import javafx.geometry.Point3D;
@@ -10,6 +14,11 @@ public class Hist extends Cylinder {
 	private Point3D target;
 	private int lat;
 	private int lon;
+	/**
+	 * The constructor for the histograms
+	 * @param origin the origin of the histograms
+	 * @param target the end of the histograms
+	 */
 	public Hist(Point3D origin, Point3D target) {
 		super(0.01f,0.1f);
 		this.origin = origin;
@@ -29,13 +38,20 @@ public class Hist extends Cylinder {
 	    this.lon = 0;
 	}
 
-	
+	/**
+	 * A setter for the origin of the histograms
+	 * @param newVal the new point of start of the histograms
+	 */
 	public void setOrigin(Point3D newVal) {
 		this.origin = newVal;
 	    Point3D diff = this.target.subtract(this.origin);
 	    double height = diff.magnitude();
 	    this.setHeight(height);
 	}
+	/**
+	 * A setter for the end of the histograms
+	 * @param newVal the new point of end of the histograms
+	 */
 	public void setTarget(Point3D newVal) {
 		this.target = newVal;
 	    Point3D diff = this.target.subtract(this.origin);
@@ -43,18 +59,34 @@ public class Hist extends Cylinder {
 	    this.setHeight(height);
 	}
 	
+	/**
+	 * A setter for the longitude
+	 * @param lon the longitude
+	 */
 	public void setLon(int lon) {
 		this.lon = lon;
 	}
 	
+	/**
+	 * A setter for the latitude
+	 * @param lat the latitude
+	 */
 	public void setLat(int lat) {
 		this.lat = lat;
 	}
 	
+	/**
+	 * A getter for the latitude
+	 * @return the latitude
+	 */
 	public int getLat() {
 		return(this.lat);
 	}
 	
+	/**
+	 * A getter for the longitude
+	 * @return the longitude
+	 */
 	public int getLon() {
 		return(this.lon);
 	}

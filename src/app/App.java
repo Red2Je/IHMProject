@@ -1,13 +1,14 @@
+/**
+ * The main method of the app anomaly visualiser
+ * @author Nicolas Sylvestre
+ */
 package app;
 
 
-import controller.AppController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.SubScene;
-import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 public class App extends Application {

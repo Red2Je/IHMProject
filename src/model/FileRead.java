@@ -1,3 +1,7 @@
+/**
+ * A class to load the csv file containing the anomaly of temperature
+ * @author Nicolas Sylvestre
+ */
 package model;
 
 import java.io.BufferedReader;

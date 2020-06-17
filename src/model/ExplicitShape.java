@@ -1,13 +1,12 @@
+/**
+ * A class to represent both quadrilateral arrays and histograms arrays, with their associated methods
+ * @author Nicolas Sylvestre
+ */
 package model;
 import javafx.geometry.Point3D;
-import javafx.scene.Group;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Translate;
 
 import java.util.ArrayList;
 
@@ -17,8 +16,9 @@ public class ExplicitShape {
 
 	ArrayList<MeshView> quadArray = new ArrayList<MeshView>();
 	ArrayList<Hist> histArray = new ArrayList<Hist>();
-	private int selectedLat ;
-	private int selectedLon ;
+	/**
+	 * The constructor setup both quadArray and histArray with all the meshView inside
+	 */
 	public ExplicitShape() {
 		System.out.println("[Shaping] Building shapes");
 		for(int lat = -88; lat <89; lat+=4) {
@@ -79,34 +79,41 @@ public class ExplicitShape {
 		return(meshView);
 	}
 	
-	
+	/**
+	 * A method to update the color and the height (for the histograms) of both quadArray and histArray
+	 * @param yearData the year you want to visualize the data at
+	 * @param max the maximum of the data
+	 * @param min the minimum of the data
+	 */
 	public void setColorAndData(ArrayList<Double> yearData, double max, double min) {
-		for(int i = 0;i<this.quadArray.size();i++) {
+		for(int i = 0;i<this.quadArray.size();i++) {//We set the max for the int to quadArray.size because all the array quadArray, histArray and yearData has the same length
 			PhongMaterial material = new PhongMaterial();
-			material.setDiffuseColor(Converter.dataToColor(yearData.get(i), max, min, 0.4));
+			material.setDiffuseColor(Converter.dataToColor(yearData.get(i), max, min, 0.4));//We compute the new color with the converter method
 			this.quadArray.get(i).setMaterial(material);
 			Hist current = this.histArray.get(i);
 			current.setOrigin(Converter.geoCoordTo3dCoord((float)current.getLat(), (float)current.getLon(), 1.05f));
-			current.setTarget(Converter.geoCoordTo3dCoord((float)current.getLat(), (float)current.getLon(), yearData.get(i).floatValue()/2));
+			float newValue;//We make a disjunction to determine if the value is NaN or not
+			if(yearData.get(i).floatValue() == Float.NaN) {
+				newValue = 0.01f;
+			}else {
+				newValue = (float) (Math.floor(yearData.get(i).doubleValue()*10)/10);//Here we have something special: we round the data up to 0.1 because else creating a cylinder is way too laggy, for some reason
+			}
+			current.setTarget(Converter.geoCoordTo3dCoord((float)current.getLat(), (float)current.getLon(), newValue));
 			current.setMaterial(material);
 		}
 	}
 	
-	
-	
-	public int getSelectedLat() {
-		return(this.selectedLat);
-	}
-	
-	public int getSelectedLon() {
-		return(this.selectedLon);
-	}
-	
-	
+	/**
+	 * A getter for the quadArray
+	 * @return the quadArray
+	 */
 	public ArrayList<MeshView> getQuad(){
 		return(this.quadArray);
 	}
-	
+	/**
+	 * A getter for the histArray
+	 * @return the histArray
+	 */
 	public ArrayList<Hist> getHist(){
 		return(this.histArray);
 	}
