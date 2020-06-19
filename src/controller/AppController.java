@@ -541,6 +541,7 @@ public void updateChart(int lat, int lon) {
 		for(Integer year = 1880; year <= 2020 ; year++) {
 			dataSeries.getData().add(new XYChart.Data<String,Double>(year.toString(),this.model.getData(year.intValue(), lat, lon)));
 		}
+		chart.setTitle("lat : "+lat+" lon : "+lon);
 		chart.getData().add(dataSeries);
 		chart.setVisible(true);
 	}else {
